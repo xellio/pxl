@@ -5,6 +5,7 @@ import (
 	"image"
 	"image/color"
 	"image/png"
+	"io/ioutil"
 	"math"
 	"os"
 	"time"
@@ -21,14 +22,24 @@ type Context struct {
 }
 
 func (c Context) Process() (bool, error) {
+
 	if c.IsEncodeMode {
 		if err := c.encode(); err != nil {
 			return false, err
 		}
+
+		f, _ := os.OpenFile(c.Target, os.O_WRONLY|os.O_CREATE, 0600)
+		defer f.Close()
+		png.Encode(f, c.encodedPayload)
 	}
 
 	if c.IsDecodeMode {
 		if err := c.decode(); err != nil {
+			return false, err
+		}
+
+		err := ioutil.WriteFile(c.Target, c.decodedPayload, 0644)
+		if err != nil {
 			return false, err
 		}
 	}
@@ -37,7 +48,12 @@ func (c Context) Process() (bool, error) {
 }
 
 func (c Context) encode() error {
-	msg := []byte(c.Source)
+
+	msg, err := ioutil.ReadFile(c.Source)
+	if err != nil {
+		return err
+	}
+
 	dimensions := int(math.Sqrt(float64(len(msg)/4))) + 1
 
 	var pxl [][][]byte
@@ -99,10 +115,6 @@ func (c Context) encode() error {
 			x++
 		}
 	}
-
-	f, _ := os.OpenFile(c.Target, os.O_WRONLY|os.O_CREATE, 0600)
-	defer f.Close()
-	png.Encode(f, img)
 
 	c.encodedPayload = img
 

@@ -9,7 +9,7 @@ import (
 )
 
 var (
-	isEncode      = pflag.BoolP("encode", "e", true, "Enable encode mode")
+	isEncode      = pflag.BoolP("encode", "e", false, "Enable encode mode")
 	isDecode      = pflag.BoolP("decode", "d", false, "Enable decode mode")
 	isDebugMode   = pflag.Bool("debug", false, "Enable debug mode")
 	isVersionMode = pflag.BoolP("version", "v", false, "Display version number")
