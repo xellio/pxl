@@ -32,6 +32,7 @@ func (c Context) Process() (bool, error) {
 			return false, err
 		}
 	}
+
 	return true, nil
 }
 
