@@ -1,12 +1,8 @@
 package main
 
 import (
-	"flag"
 	"fmt"
-	"github.com/xellio/pxl/core"
-	"io/ioutil"
-	"os"
-	"time"
+	"github.com/xellio/pxl/core/cli"
 )
 
 func main() {
@@ -45,14 +41,14 @@ func main() {
 			fmt.Println(err)
 			os.Exit(0)
 		}
-		/*
-			//imgFile, err := ioutil.ReadFile("out.png")
-			var b bytes.Buffer
-			w := gzip.NewWriter(&b)
-			w.Write(dat)
-			w.Close()
-			err = ioutil.WriteFile("out.gz", b.Bytes(), 0666)
-		*/
+
+		//	//imgFile, err := ioutil.ReadFile("out.png")
+		//	var b bytes.Buffer
+		//	w := gzip.NewWriter(&b)
+		//	w.Write(dat)
+		//	w.Close()
+		//	err = ioutil.WriteFile("out.gz", b.Bytes(), 0666)
+
 		elapsedEncodingTime := time.Since(startEncodingTime)
 
 		fmt.Printf("Time for encoding: %s\n", elapsedEncodingTime)
