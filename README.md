@@ -8,25 +8,28 @@ package main
 
 import (
 	"fmt"
-	"github.com/xellio/pxl/core/cli"
+	"github.com/xellio/pxl"
 	"os"
 )
 
 func main() {
 	// Parsing and validate arguments before running
-	var context, err = cli.InitFlags()
+	context, err := pxl.InitFlags()
 	if err != nil {
 		fmt.Println(err)
 		os.Exit(1)
 	}
 
-	if context.IsEncodeMode {
-		fmt.Println("ENCODE")
+	success, err := context.Process()
+	if err != nil {
+		fmt.Println(err)
+		os.Exit(1)
 	}
 
-	if context.IsDecodeMode {
-		fmt.Println("DECODE")
+	if success {
+		fmt.Println("SUCCESS")
 	}
+
 }
 ```
 

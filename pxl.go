@@ -1,10 +1,11 @@
-package cli
+package pxl
 
 import (
 	"fmt"
 	"github.com/spf13/pflag"
-	"github.com/xellio/pxl/core/common"
 	"os"
+
+	"github.com/xellio/pxl/common"
 )
 
 var (
@@ -13,7 +14,7 @@ var (
 	isDebugMode   = pflag.Bool("debug", false, "Enable debug mode")
 	isVersionMode = pflag.BoolP("version", "v", false, "Display version number")
 	source        = pflag.StringP("input", "i", "", "File (path) to convert")
-	target        = pflag.StringP("output", "o", "", "Output file")
+	target        = pflag.StringP("output", "o", "out.png", "Output file")
 )
 
 func UseVersionMode() bool {

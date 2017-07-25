@@ -1,14 +1,42 @@
 package pxl
 
 import (
+	"fmt"
 	"image"
 	"image/color"
 	"image/png"
 	"math"
 	"os"
+	"time"
 )
 
-func Encode(msg []byte, outputFileName string) (encodedImage image.Image, err error) {
+type Context struct {
+	IsEncodeMode   bool
+	IsDecodeMode   bool
+	IsDebugMode    bool
+	Source         string
+	Target         string
+	encodedPayload image.Image
+	decodedPayload []byte
+}
+
+func (c Context) Process() (bool, error) {
+	if c.IsEncodeMode {
+		if err := c.encode(); err != nil {
+			return false, err
+		}
+	}
+
+	if c.IsDecodeMode {
+		if err := c.decode(); err != nil {
+			return false, err
+		}
+	}
+	return true, nil
+}
+
+func (c Context) encode() error {
+	msg := []byte(c.Source)
 	dimensions := int(math.Sqrt(float64(len(msg)/4))) + 1
 
 	var pxl [][][]byte
@@ -71,23 +99,42 @@ func Encode(msg []byte, outputFileName string) (encodedImage image.Image, err er
 		}
 	}
 
-	f, _ := os.OpenFile(outputFileName, os.O_WRONLY|os.O_CREATE, 0600)
+	f, _ := os.OpenFile(c.Target, os.O_WRONLY|os.O_CREATE, 0600)
 	defer f.Close()
 	png.Encode(f, img)
 
-	return img, nil
+	c.encodedPayload = img
+
+	return nil
+
 }
 
-func Decode(path string) (msg []byte, err error) {
-	img, err := loadImage(path)
+func (c Context) decode() error {
+	img, err := loadImage(c.Source)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
-	for _, c := range img.Pix {
-		msg = append(msg, c)
+	for _, i := range img.Pix {
+		c.decodedPayload = append(c.decodedPayload, i)
 	}
-	return msg, nil
+	return nil
+}
+
+func (c Context) DebugString() string {
+	return fmt.Sprintf(`%s
+isDebugMode	: %t
+isEncode 	: %t
+isDecode 	: %t
+source   	: %s
+target   	: %s`,
+		time.Now().Local(),
+		c.IsEncodeMode,
+		c.IsDecodeMode,
+		c.IsDebugMode,
+		c.Source,
+		c.Target,
+	)
 }
 
 func loadImage(path string) (*image.NRGBA, error) {
