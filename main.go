@@ -3,9 +3,9 @@ package main
 import (
 	"flag"
 	"fmt"
+	"github.com/xellio/pxl/core"
 	"io/ioutil"
 	"os"
-	"pxl"
 	"time"
 )
 
