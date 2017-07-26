@@ -7,28 +7,29 @@ pxl is a small command-line tool for converting text or files to png images. In 
 package main
 
 import (
-	"fmt"
-	"github.com/xellio/pxl"
-	"os"
+    "fmt"
+    "github.com/xellio/pxl"
+    "os"
 )
 
 func main() {
-	// Parsing and validate arguments before running
-	context, err := pxl.InitFlags()
-	if err != nil {
-		fmt.Println(err)
-		os.Exit(1)
-	}
+    // Parsing and validate arguments before running
+    pxl, err := pxl.InitFlags()
+    if err != nil {
+        fmt.Println(err)
+        os.Exit(1)
+    }
 
-	success, err := context.Process()
-	if err != nil {
-		fmt.Println(err)
-		os.Exit(1)
-	}
+    success, err := pxl.Process()
+    if err != nil {
+        fmt.Println(err)
+        os.Exit(1)
+    }
 
-	if success {
-		fmt.Println("SUCCESS")
-	}
+    if success {
+        fmt.Println("Success")
+        fmt.Println("Output:", pxl.Target)
+    }
 
 }
 ```
