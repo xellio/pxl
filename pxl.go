@@ -35,7 +35,14 @@ func (p Pxl) Process() (bool, error) {
 
 		f, _ := os.OpenFile(p.Target, os.O_WRONLY|os.O_CREATE, 0600)
 		defer f.Close()
+		//******************************************
+		start := time.Now()
+		//==========================================
 		png.Encode(f, p.encodedPayload)
+		//******************************************
+		elapsed := time.Since(start)
+		fmt.Printf("encoding to png: %s\n", elapsed)
+		//==========================================
 	}
 
 	if p.IsDecodeMode {
@@ -68,6 +75,10 @@ func (p *Pxl) Encode() error {
 
 	var line [][]byte
 	var pixel []byte
+
+	//******************************************
+	start := time.Now()
+	//==========================================
 
 	//loop msg bytes
 	for i, c := range msg {
@@ -105,12 +116,19 @@ func (p *Pxl) Encode() error {
 	}
 	pxl = append(pxl, line)
 
+	//******************************************
+	elapsed := time.Since(start)
+	fmt.Printf("generating pixel: %s\n", elapsed)
+	//==========================================
+
 	//create image with dimensions x dimensions
 	img := image.NewNRGBA((image.Rect(0, 0, dimensions, dimensions)))
 
+	//******************************************
+	start2 := time.Now()
+	//==========================================
 	x := 0
 	y := 0
-
 	for i, line := range pxl {
 		x = 0
 		if i > 0 {
@@ -123,6 +141,11 @@ func (p *Pxl) Encode() error {
 			x++
 		}
 	}
+
+	//******************************************
+	elapsed2 := time.Since(start2)
+	fmt.Printf("generating image: %s\n", elapsed2)
+	//==========================================
 
 	p.encodedPayload = img
 
