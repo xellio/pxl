@@ -1,73 +1,28 @@
 package main
 
 import (
-	"flag"
 	"fmt"
-	"github.com/xellio/pxl/core"
-	"io/ioutil"
+	pxl "github.com/xellio/pxl/core"
 	"os"
-	"time"
 )
 
 func main() {
-
-	encode := flag.Bool("e", false, "encode flag")
-	decode := flag.Bool("d", false, "decode flag")
-	filePath := flag.String("f", "", "the file to convert")
-	outputFileName := flag.String("o", "", "the filename of your output")
-
-	flag.Parse()
-
-	if !*encode && !*decode {
-		fmt.Println("No action ('-d' for decode or '-e' for encode) specified")
-		os.Exit(0)
+	// Parsing and validate arguments before running
+	pxl, err := pxl.InitFlags()
+	if err != nil {
+		fmt.Println(err)
+		os.Exit(1)
 	}
 
-	if len(*filePath) <= 0 {
-		fmt.Println("No input file specified ('-f=/path/to/file')")
-		os.Exit(0)
+	success, err := pxl.Process()
+	if err != nil {
+		fmt.Println(err)
+		os.Exit(1)
 	}
 
-	if *encode {
-		startEncodingTime := time.Now()
-		dat, err := ioutil.ReadFile(*filePath)
-		if err != nil {
-			fmt.Println(err)
-			os.Exit(0)
-		}
-
-		if len(*outputFileName) <= 0 {
-			*outputFileName = "out.png"
-		}
-
-		_, err = pxl.Encode(dat, *outputFileName)
-		if err != nil {
-			fmt.Println(err)
-			os.Exit(0)
-		}
-		/*
-			//imgFile, err := ioutil.ReadFile("out.png")
-			var b bytes.Buffer
-			w := gzip.NewWriter(&b)
-			w.Write(dat)
-			w.Close()
-			err = ioutil.WriteFile("out.gz", b.Bytes(), 0666)
-		*/
-		elapsedEncodingTime := time.Since(startEncodingTime)
-
-		fmt.Printf("Time for encoding: %s\n", elapsedEncodingTime)
+	if success {
+		fmt.Println("Success")
+		fmt.Println("Output:", pxl.Target)
 	}
 
-	if *decode {
-
-		startDecodingTime := time.Now()
-		decodedOutput, err := pxl.Decode(*filePath)
-		if err != nil {
-			fmt.Println(err)
-			os.Exit(0)
-		}
-		elapsedDecodingTime := time.Since(startDecodingTime)
-		fmt.Printf("Time for decoding: %s\n", elapsedDecodingTime)
-		fmt.Println(string(decodedOutput))
-	}
 }
