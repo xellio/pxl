@@ -1,11 +1,11 @@
-package pxl
+package core
 
 import (
 	"fmt"
 	"github.com/spf13/pflag"
 	"os"
 
-	"github.com/xellio/pxl/common"
+	"github.com/xellio/pxl/core/common"
 )
 
 var (

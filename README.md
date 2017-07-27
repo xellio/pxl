@@ -2,37 +2,12 @@
 
 pxl is a small command-line tool for converting text or files to png images. In some cases this can save some bytes when transfering the data or just retuns a spacy image.
 
-## Code Example
+## Usage
 ```
-package main
-
-import (
-    "fmt"
-    "github.com/xellio/pxl"
-    "os"
-)
-
-func main() {
-    // Parsing and validate arguments before running
-    pxl, err := pxl.InitFlags()
-    if err != nil {
-        fmt.Println(err)
-        os.Exit(1)
-    }
-
-    success, err := pxl.Process()
-    if err != nil {
-        fmt.Println(err)
-        os.Exit(1)
-    }
-
-    if success {
-        fmt.Println("Success")
-        fmt.Println("Output:", pxl.Target)
-    }
-
-}
+./pxl -e -i foo.txt -o foo.png
 ```
+### Todo
+speed up the generation of pixels
 
 ## Motivation
 

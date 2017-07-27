@@ -1,4 +1,4 @@
-package pxl
+package core
 
 import (
 	"fmt"
