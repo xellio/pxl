@@ -18,7 +18,6 @@ var (
 	isVersionMode = pflag.BoolP("version", "v", false, "Display version number")
 	source        = pflag.StringP("input", "i", "", "File (path) to convert")
 	target        = pflag.StringP("output", "o", "out.png", "Output file") // remove this as soon as the tar logic works
-	useTar        = pflag.BoolP("tar", "t", false, "tar option")           // for temp disabling the tar logic
 )
 
 // Returns the isVersionMode flag
@@ -60,7 +59,7 @@ func generatePxlFromFlags() (Pxl, error) {
 		return *pxl, fmt.Errorf("Logic error: encode and decode flags are the same")
 	}
 
-	if *isEncode && *useTar {
+	if *isEncode {
 		source, err := convertToTar(*source)
 		pxl.Source = source
 		if err != nil {
