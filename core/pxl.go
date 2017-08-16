@@ -83,10 +83,6 @@ func (p *Pxl) Encode() error {
 
 	dimensions := int(math.Sqrt(float64(finfo.Size()/4))) + 1
 
-	//******************************************
-	start := time.Now()
-	//==========================================
-
 	x := 0
 	y := 0
 
@@ -133,11 +129,6 @@ func (p *Pxl) Encode() error {
 			img.Set(posX, posY, color.NRGBA{0, 0, 0, 255})
 		}
 	}
-
-	//******************************************
-	elapsed := time.Since(start)
-	fmt.Printf("generating image: %s\n", elapsed)
-	//==========================================
 
 	p.encodedPayload = img
 	return nil
