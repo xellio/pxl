@@ -1,6 +1,7 @@
 package core
 
 import (
+	"errors"
 	"fmt"
 	"image"
 	"image/color"
@@ -33,7 +34,12 @@ func (p Pxl) Process() (bool, error) {
 		}
 		p.DebugString()
 
-		f, _ := os.OpenFile(p.Target, os.O_WRONLY|os.O_CREATE, 0600)
+		f, err := os.OpenFile(p.Target, os.O_WRONLY|os.O_CREATE, 0600)
+
+		if err != nil {
+			panic(err)
+		}
+
 		defer f.Close()
 		//******************************************
 		start := time.Now()
@@ -64,93 +70,77 @@ func (p Pxl) Process() (bool, error) {
 // Encodes the Pxl.Source and stores it to Pxl.encodedPayload
 func (p *Pxl) Encode() error {
 
-	msg, err := ioutil.ReadFile(p.Source)
+	f, err := os.OpenFile(p.Source, os.O_RDONLY, 0444)
+	defer f.Close()
 	if err != nil {
 		return err
 	}
 
-	dimensions := int(math.Sqrt(float64(len(msg)/4))) + 1
+	finfo, err := os.Stat(p.Source)
+	if err != nil {
+		return err
+	}
 
-	var pxl [][][]byte
-
-	var line [][]byte
-	var pixel []byte
+	dimensions := int(math.Sqrt(float64(finfo.Size()/4))) + 1
 
 	//******************************************
 	start := time.Now()
 	//==========================================
 
-	//loop msg bytes
-	for i, c := range msg {
-		if i > 0 && (i%4) == 0 {
-			line = append(line, pixel)
-			pixel = nil
-		}
-		pixel = append(pixel, c)
-
-		if len(line) > 0 && (len(line)%dimensions) == 0 {
-			pxl = append(pxl, line)
-			line = nil
-		}
-	}
-
-	//calculate n missing values in incomplete color
-	if len(pixel) < 4 {
-		missing := 4 - len(pixel)
-		for i := 0; i < missing; i++ {
-			pixel = append(pixel, 255)
-		}
-	}
-
-	//append incomplete color to line
-	line = append(line, pixel)
-
-	//calculate n missing values in line
-	if len(line) < dimensions {
-		missing := (dimensions - len(line))
-		missingColor := []byte{0, 0, 0, 255}
-		//add n missing colors to line
-		for i := 0; i < missing; i++ {
-			line = append(line, missingColor)
-		}
-	}
-	pxl = append(pxl, line)
-
-	//******************************************
-	elapsed := time.Since(start)
-	fmt.Printf("generating pixel: %s\n", elapsed)
-	//==========================================
+	x := 0
+	y := 0
 
 	//create image with dimensions x dimensions
 	img := image.NewNRGBA((image.Rect(0, 0, dimensions, dimensions)))
 
-	//******************************************
-	start2 := time.Now()
-	//==========================================
-	x := 0
-	y := 0
-	for i, line := range pxl {
-		x = 0
-		if i > 0 {
-			y++
+	//fillPx := color.NRGBA{0, 0, 0, 255}
+	//draw.Draw(img, img.Bounds(), &image.Uniform{fillPx}, image.ZP, draw.Src)
+
+	var buffer = make([]byte, 838860800)
+	tmp := make([]byte, 4)
+
+	for {
+		num, err := f.Read(buffer)
+
+		if err != errors.New("EOF") && num == 0 {
+			break
+		} else if num == 0 {
+			break
+		} else if err != nil {
+			return err
 		}
 
-		//each pixel in line
-		for _, pixel := range line {
-			img.Set(x, y, color.NRGBA{pixel[0], pixel[1], pixel[2], pixel[3]})
+		//loop msg bytes
+		for pos := 0; pos < num; pos += 4 {
+			for p := 0; p < 4; p++ {
+				if len(buffer) < pos+p {
+					tmp[p] = byte(255)
+				} else {
+					tmp[p] = buffer[pos+p]
+				}
+			}
+			img.Set(x, y, color.NRGBA{tmp[pos%4], tmp[pos%4+1], tmp[pos%4+2], tmp[pos%4+3]})
 			x++
+			if x >= dimensions {
+				y++
+				x = 0
+			}
+		}
+	}
+
+	for posY := y; posY < dimensions; posY++ {
+		for posX := x; posX < dimensions; posX++ {
+			img.Set(posX, posY, color.NRGBA{0, 0, 0, 255})
 		}
 	}
 
 	//******************************************
-	elapsed2 := time.Since(start2)
-	fmt.Printf("generating image: %s\n", elapsed2)
+	elapsed := time.Since(start)
+	fmt.Printf("generating image: %s\n", elapsed)
 	//==========================================
 
 	p.encodedPayload = img
-
 	return nil
-
 }
 
 // Decoded the Pxl.Source and stores it to Pxl.decodedPayload
