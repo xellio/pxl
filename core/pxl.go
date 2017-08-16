@@ -55,7 +55,7 @@ func (p Pxl) Process() (bool, error) {
 		if err := p.Decode(); err != nil {
 			return false, err
 		}
-
+		// @todo: handle tar
 		err := ioutil.WriteFile(p.Target, p.decodedPayload, 0644)
 		if err != nil {
 			return false, err

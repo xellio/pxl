@@ -1,11 +1,14 @@
 package core
 
 import (
+	"archive/tar"
+	"bytes"
 	"fmt"
 	"github.com/spf13/pflag"
-	"os"
-
 	"github.com/xellio/pxl/core/common"
+	"io"
+	"os"
+	"time"
 )
 
 var (
@@ -14,7 +17,8 @@ var (
 	isDebugMode   = pflag.Bool("debug", false, "Enable debug mode")
 	isVersionMode = pflag.BoolP("version", "v", false, "Display version number")
 	source        = pflag.StringP("input", "i", "", "File (path) to convert")
-	target        = pflag.StringP("output", "o", "out.png", "Output file")
+	target        = pflag.StringP("output", "o", "out.png", "Output file") // remove this as soon as the tar logic works
+	useTar        = pflag.BoolP("tar", "t", false, "tar option")           // for temp disabling the tar logic
 )
 
 // Returns the isVersionMode flag
@@ -56,13 +60,66 @@ func generatePxlFromFlags() (Pxl, error) {
 		return *pxl, fmt.Errorf("Logic error: encode and decode flags are the same")
 	}
 
+	if *isEncode && *useTar {
+		source, err := convertToTar(*source)
+		pxl.Source = source
+		if err != nil {
+			return *pxl, err
+		}
+	} else {
+		pxl.Source = *source
+	}
+
+	pxl.Target = *target
 	pxl.IsDecodeMode = *isDecode
 	pxl.IsEncodeMode = *isEncode
 	pxl.IsDebugMode = *isDebugMode
-	pxl.Source = *source
-	pxl.Target = *target
 
 	DisplayDebug(pxl.DebugString("initialized pxl"))
 
 	return *pxl, nil
+}
+
+func convertToTar(source string) (string, error) {
+	//******************************************
+	start := time.Now()
+	//==========================================
+	buf := new(bytes.Buffer)
+	tw := tar.NewWriter(buf)
+
+	finfo, err := os.Stat(source)
+	if err != nil {
+		return source, err
+	}
+
+	header := &tar.Header{
+		Name: finfo.Name(),
+		Mode: int64(finfo.Mode()),
+		Size: finfo.Size(),
+	}
+
+	if err := tw.WriteHeader(header); err != nil {
+		return source, err
+	}
+
+	f, err := os.Open(source)
+	defer f.Close()
+	if err != nil {
+		return source, err
+	}
+
+	//if _, err := tw.Write([]byte(file.Body)); err != nil {
+	if _, err := io.Copy(tw, f); err != nil {
+		return source, err
+	}
+
+	if err := tw.Close(); err != nil {
+		return source, err
+	}
+
+	//******************************************
+	elapsed := time.Since(start)
+	fmt.Printf("tar: %s\n", elapsed)
+	//==========================================
+	return source, nil
 }
