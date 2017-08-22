@@ -18,7 +18,7 @@ Assume we have a ~20MB-logfile like this:
 ```
 for i in {1..100000}
 do
-	echo '127.0.0.1 - - [22/Aug/2017:13:08:24 +0200] "GET / HTTP/1.1" 403 189 "-" "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Ubuntu Chromium/60.0.3112.78 Chrome/60.0.3112.78 Safari/537.36"' >> ./logfile.log
+	echo '127.0.0.1 - - [20/Aug/2017:13:08:24 +0200] "GET / HTTP/1.1" 403 189 "-" "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Ubuntu Chromium/60.0.3112.78 Chrome/60.0.3112.78 Safari/537.36"' >> ./logfile.log
 done
 ```
 Running
