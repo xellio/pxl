@@ -11,7 +11,6 @@ var (
 	encodeFlag    = pflag.StringP("encode", "e", "", "Enable encode mode")
 	decodeFlag    = pflag.StringP("decode", "d", "", "Enable decode mode")
 	isVersionMode = pflag.BoolP("version", "v", false, "Display version number")
-	source        = pflag.StringP("input", "i", "", "File (path) to convert") // remove this as soon as the tar logic works
 )
 
 // Returns the isVersionMode flag
@@ -40,6 +39,7 @@ func generatePxlFromFlags() (Pxl, error) {
 
 	if len(*encodeFlag) <= 0 && len(*decodeFlag) <= 0 {
 		return *pxl, fmt.Errorf("Missing argument: input is required")
+
 	}
 
 	if len(*encodeFlag) > 0 && len(*decodeFlag) > 0 {
