@@ -23,9 +23,11 @@ done
 ```
 Running
 ```
-./pxl -e example/xellio.jpg
+./pxl -e logfile.log
 ```
 will create a ~100KB file, containing all the information from logfile.log
 
 ## Installation
-go get github.com/xellio/pxl
+```
+go get -u github.com/xellio/pxl
+```
