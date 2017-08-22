@@ -30,6 +30,12 @@ type Pxl struct {
 func (p Pxl) Process() (bool, error) {
 
 	if p.IsEncodeMode {
+		originalInfo, err := os.Stat(p.Source)
+		if err != nil {
+			return false, err
+		}
+		fmt.Println("Original size:", originalInfo.Size())
+
 		if err := p.encodeTar(); err != nil {
 			return false, err
 		}
@@ -58,8 +64,15 @@ func (p Pxl) Process() (bool, error) {
 		png.Encode(f, p.encodedPayload)
 		//******************************************
 		elapsed := time.Since(start)
-		fmt.Printf("encoding to pxl: %s\n", elapsed)
 		//==========================================
+
+		targetInfo, err := os.Stat(p.Target)
+		if err != nil {
+			return false, err
+		}
+		fmt.Println("PXL size:", targetInfo.Size())
+
+		fmt.Printf("Encoding to PXL: %s\n", elapsed)
 	}
 
 	if p.IsDecodeMode {
@@ -71,7 +84,7 @@ func (p Pxl) Process() (bool, error) {
 		}
 		//******************************************
 		elapsed := time.Since(start)
-		fmt.Printf("decoding pxl: %s\n", elapsed)
+		fmt.Printf("Decoding PXL: %s\n", elapsed)
 		//==========================================
 		if err := p.decodeTar(); err != nil {
 			return false, err

@@ -1,29 +1,35 @@
-## Synopsis
-
-pxl is a small command-line tool for converting text or files to png images. In some cases this can save some bytes when transfering the data or just retuns a spacy image.
+## PXL
+pxl is a command-line tool for converting files to pxl images. In some cases this can save some bytes when transfering the data or just retuns a spacy image.
+Encoding:
+![original image](./example/xellio.jpg?raw=true "original image") --> ![pxl image](./example/xellio.jpg.pxl?raw=true "pxl image")
+Decoding:
+![pxl image](./example/xellio.jpg.pxl?raw=true "pxl image") --> ![original image](./example/xellio.jpg?raw=true "original image")
 
 ## Usage
+### encoding:
 ```
-./pxl -e -i foo.txt -o foo.png
+./pxl -e example/xellio.jpg
 ```
-### Todo
-speed up the generation of pixels
+will create a xellio.jpg.pxl file
+### decoding:
+```
+./pxl -d xellio.jpg.pxl
+```
+will decode the xellio.jpg.pxl file back to xellio.jpg
 
-## Motivation
-
-Learning go
+##More usefull example
+Assume we have a ~20MB-logfile like this:
+```
+for i in {1..100000}
+do
+	echo '127.0.0.1 - - [22/Aug/2017:13:08:24 +0200] "GET / HTTP/1.1" 403 189 "-" "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Ubuntu Chromium/60.0.3112.78 Chrome/60.0.3112.78 Safari/537.36"' >> ./logfile.log
+done
+```
+Running
+```
+./pxl -e example/xellio.jpg
+```
+will create a ~100KB file, containing all the information from logfile.log
 
 ## Installation
-
 go get github.com/xellio/pxl
-
-## API Reference
-
-
-## Tests
-
-
-## Contributors
-
-
-## License
