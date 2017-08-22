@@ -28,7 +28,7 @@ Running
 will create a ~100KB file, containing all the information from logfile.log
 
 ## Better than any other compression?
-No - But it looks good
+No, probably not - But it looks good
 
 ## Installation
 ```
