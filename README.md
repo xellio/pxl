@@ -1,9 +1,13 @@
 ## PXL
 pxl is a command-line tool for converting files to pxl images. In some cases this can save some bytes when transfering the data or just retuns a spacy image.
+
 Encoding:
-![original image](./example/xellio.jpg =250x "original image") --> ![pxl image](./example/xellio.jpg.pxl?raw=true "pxl image")
+
+<img src="./example/xellio.jpg" width="150" alt="original file"> --> ![pxl image](./example/xellio.jpg.pxl?raw=true "pxl image")
+
 Decoding:
-![pxl image](./example/xellio.jpg.pxl?raw=true "pxl image") --> ![original image](./example/xellio.jpg =250x "original image")
+
+![pxl image](./example/xellio.jpg.pxl?raw=true "pxl image") --> <img src="./example/xellio.jpg" width="150" alt="original file">
 
 ## Usage
 ### encoding:
