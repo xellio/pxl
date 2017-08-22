@@ -187,9 +187,6 @@ func loadImage(path string) (*image.NRGBA, error) {
 }
 
 func (p *Pxl) encodeTar() error {
-	//******************************************
-	//start := time.Now()
-	//==========================================
 
 	finfo, err := os.Stat(p.Source)
 	if err != nil {
@@ -229,10 +226,6 @@ func (p *Pxl) encodeTar() error {
 		return err
 	}
 
-	//******************************************
-	//elapsed := time.Since(start)
-	//fmt.Printf("tar: %s\n", elapsed)
-	//==========================================
 	p.Source = tarfilename
 
 	return nil
