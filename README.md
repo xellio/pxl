@@ -13,7 +13,7 @@ pxl is a command-line tool for converting files to pxl images. In some cases thi
 ```
 ![pxl image](./example/xellio.jpg.pxl?raw=true "pxl image") --> <img src="./example/xellio.jpg" width="163" alt="original file">
 
-##More usefull example
+## More usefull example
 Assume we have a ~20MB-logfile like this:
 ```
 for i in {1..100000}
