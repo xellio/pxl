@@ -30,6 +30,9 @@ will create a ~100KB file, containing all the information from logfile.log
 ## Better than any other compression?
 No, probably not - But it looks good
 
+## Warning
+Encoding too lage files can freeze your computer
+
 ## Installation
 ```
 go get -u github.com/xellio/pxl
