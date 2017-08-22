@@ -31,7 +31,7 @@ will create a ~100KB file, containing all the information from logfile.log
 No, probably not - But it looks good
 
 ## Warning
-Encoding too lage files can freeze your computer
+Encoding too lage files can freeze your computer (depending on your hardware)
 
 ## Installation
 ```
