@@ -1,8 +1,7 @@
 package common
 
 const (
-	VERSION      = 0.1
-	BUILD        = "17.30"
+	VERSION      = 1.0
 	PRODUCT_NAME = "PXL"
 	AUTHOR       = "xellio"
 	CONTACT      = "https://github.com/xellio"

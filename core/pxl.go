@@ -1,12 +1,14 @@
 package core
 
 import (
+	"archive/tar"
+	"bytes"
 	"errors"
 	"fmt"
 	"image"
 	"image/color"
 	"image/png"
-	"io/ioutil"
+	"io"
 	"math"
 	"os"
 	"time"
@@ -16,7 +18,6 @@ import (
 type Pxl struct {
 	IsEncodeMode   bool
 	IsDecodeMode   bool
-	IsDebugMode    bool
 	Source         string
 	Target         string
 	encodedPayload image.Image
@@ -29,40 +30,53 @@ type Pxl struct {
 func (p Pxl) Process() (bool, error) {
 
 	if p.IsEncodeMode {
-		if err := p.Encode(); err != nil {
+		if err := p.encodeTar(); err != nil {
 			return false, err
 		}
-		p.DebugString()
+
+		if err := p.Encode(); err != nil {
+
+			if err := p.removeTar(); err != nil {
+				return false, err
+			}
+			return false, err
+		}
+
+		if err := p.removeTar(); err != nil {
+			return false, err
+		}
 
 		f, err := os.OpenFile(p.Target, os.O_WRONLY|os.O_CREATE, 0600)
-
 		if err != nil {
 			panic(err)
 		}
-
 		defer f.Close()
+
 		//******************************************
 		start := time.Now()
 		//==========================================
 		png.Encode(f, p.encodedPayload)
 		//******************************************
 		elapsed := time.Since(start)
-		fmt.Printf("encoding to png: %s\n", elapsed)
+		fmt.Printf("encoding to pxl: %s\n", elapsed)
 		//==========================================
 	}
 
 	if p.IsDecodeMode {
+		//******************************************
+		start := time.Now()
+		//==========================================
 		if err := p.Decode(); err != nil {
 			return false, err
 		}
-		// @todo: handle tar
-		err := ioutil.WriteFile(p.Target, p.decodedPayload, 0644)
-		if err != nil {
+		//******************************************
+		elapsed := time.Since(start)
+		fmt.Printf("decoding pxl: %s\n", elapsed)
+		//==========================================
+		if err := p.decodeTar(); err != nil {
 			return false, err
 		}
 	}
-
-	DisplayDebug(p.DebugString("DONE"))
 
 	return true, nil
 }
@@ -88,9 +102,6 @@ func (p *Pxl) Encode() error {
 
 	//create image with dimensions x dimensions
 	img := image.NewNRGBA((image.Rect(0, 0, dimensions, dimensions)))
-
-	//fillPx := color.NRGBA{0, 0, 0, 255}
-	//draw.Draw(img, img.Bounds(), &image.Uniform{fillPx}, image.ZP, draw.Src)
 
 	var buffer = make([]byte, 838860800)
 	tmp := make([]byte, 4)
@@ -162,33 +173,82 @@ func loadImage(path string) (*image.NRGBA, error) {
 	return img.(*image.NRGBA), nil
 }
 
-// Outputs a petty presentation of the Pxl struct
-func (p Pxl) DebugString(msg ...string) string {
-	x, y := 0, 0
-	if p.encodedPayload != nil {
-		x = p.encodedPayload.Bounds().Max.X
-		y = p.encodedPayload.Bounds().Max.Y
+func (p *Pxl) encodeTar() error {
+	//******************************************
+	//start := time.Now()
+	//==========================================
+
+	finfo, err := os.Stat(p.Source)
+	if err != nil {
+		return err
 	}
 
-	if len(msg) <= 0 {
-		msg = append(msg, time.Now().String())
+	header := &tar.Header{
+		Name: finfo.Name(),
+		Mode: int64(finfo.Mode()),
+		Size: finfo.Size(),
 	}
 
-	return fmt.Sprintf(`%s
-isDebugMode     : %t
-isEncode        : %t
-isDecode        : %t
-source          : %s
-target          : %s
-encodedPayload  : %d x %d
-decodedPayload  : %d`,
-		msg,
-		p.IsEncodeMode,
-		p.IsDecodeMode,
-		p.IsDebugMode,
-		p.Source,
-		p.Target,
-		x, y,
-		len(p.decodedPayload),
-	)
+	tarfilename := p.Source + ".tar"
+	tarfile, err := os.OpenFile(tarfilename, os.O_WRONLY|os.O_CREATE, 0600)
+	if err != nil {
+		return err
+	}
+	defer tarfile.Close()
+
+	tw := tar.NewWriter(tarfile)
+
+	if err := tw.WriteHeader(header); err != nil {
+		return err
+	}
+
+	file, err := os.Open(p.Source)
+	if err != nil {
+		return err
+	}
+	defer file.Close()
+
+	if _, err := io.Copy(tw, file); err != nil {
+		return err
+	}
+
+	if err := tw.Close(); err != nil {
+		return err
+	}
+
+	//******************************************
+	//elapsed := time.Since(start)
+	//fmt.Printf("tar: %s\n", elapsed)
+	//==========================================
+	p.Source = tarfilename
+
+	return nil
+}
+
+func (p *Pxl) decodeTar() error {
+	r := bytes.NewReader(p.decodedPayload)
+	tr := tar.NewReader(r)
+	for {
+		hdr, err := tr.Next()
+		if err == io.EOF {
+			break
+		} else if err != nil {
+			return err
+		}
+
+		file, err := os.OpenFile(hdr.FileInfo().Name(), os.O_WRONLY|os.O_CREATE, hdr.FileInfo().Mode())
+		if err != nil {
+			return err
+		}
+		defer file.Close()
+
+		if _, err := io.Copy(file, tr); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (p *Pxl) removeTar() error {
+	return os.Remove(p.Source)
 }

@@ -21,8 +21,11 @@ func main() {
 	}
 
 	if success {
-		fmt.Println("Success")
-		fmt.Println("Output:", pxl.Target)
+		if pxl.IsEncodeMode {
+			fmt.Println("PXL-File:", pxl.Target)
+		} else {
+			fmt.Println("Success")
+		}
 	}
 
 }
