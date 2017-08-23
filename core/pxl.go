@@ -27,29 +27,29 @@ type Pxl struct {
 // Checks the context on the Pxl struct
 // Encode the Source if Pxl.IsEncodeMode
 // Decode the Source if Pxl.IsDecodeMode
-func (p Pxl) Process() (bool, error) {
+func (p Pxl) Process() error {
 
 	if p.IsEncodeMode {
 		originalInfo, err := os.Stat(p.Source)
 		if err != nil {
-			return false, err
+			return err
 		}
 		fmt.Println("Original size:", originalInfo.Size())
 
 		if err := p.encodeTar(); err != nil {
-			return false, err
+			return err
 		}
 
 		if err := p.Encode(); err != nil {
 
 			if err := p.removeTar(); err != nil {
-				return false, err
+				return err
 			}
-			return false, err
+			return err
 		}
 
 		if err := p.removeTar(); err != nil {
-			return false, err
+			return err
 		}
 
 		f, err := os.OpenFile(p.Target, os.O_WRONLY|os.O_CREATE, 0600)
@@ -68,7 +68,7 @@ func (p Pxl) Process() (bool, error) {
 
 		targetInfo, err := os.Stat(p.Target)
 		if err != nil {
-			return false, err
+			return err
 		}
 		fmt.Println("PXL size:", targetInfo.Size())
 
@@ -80,18 +80,18 @@ func (p Pxl) Process() (bool, error) {
 		start := time.Now()
 		//==========================================
 		if err := p.Decode(); err != nil {
-			return false, err
+			return err
 		}
 		//******************************************
 		elapsed := time.Since(start)
 		fmt.Printf("Decoding PXL: %s\n", elapsed)
 		//==========================================
 		if err := p.decodeTar(); err != nil {
-			return false, err
+			return err
 		}
 	}
 
-	return true, nil
+	return nil
 }
 
 // Encodes the Pxl.Source and stores it to Pxl.encodedPayload
