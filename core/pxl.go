@@ -113,7 +113,6 @@ func (p Pxl) Process() error {
 
 // Encodes the Pxl.Source and stores it to Pxl.encodedPayload
 func (p *Pxl) Encode() error {
-	runtime.GOMAXPROCS(runtime.NumCPU())
 
 	finfo, err := os.Stat(p.Source)
 	if err != nil {
