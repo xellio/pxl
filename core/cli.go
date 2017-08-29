@@ -5,12 +5,14 @@ import (
 	"github.com/spf13/pflag"
 	"github.com/xellio/pxl/core/common"
 	"os"
+	"runtime"
 )
 
 var (
 	encodeFlag    = pflag.StringP("encode", "e", "", "Enable encode mode")
 	decodeFlag    = pflag.StringP("decode", "d", "", "Enable decode mode")
 	isVersionMode = pflag.BoolP("version", "v", false, "Display version number")
+	maxProcs      = pflag.IntP("procs", "p", runtime.NumCPU(), "Number of threads to use")
 )
 
 // Returns the isVersionMode flag
@@ -28,7 +30,7 @@ func InitFlags() (Pxl, error) {
 		fmt.Printf("%s : Version %f\nAuthor : %s (see: %s)\n", common.PRODUCT_NAME, common.VERSION, common.AUTHOR, common.CONTACT)
 		os.Exit(0)
 	}
-
+	runtime.GOMAXPROCS(*maxProcs)
 	return generatePxlFromFlags()
 }
 

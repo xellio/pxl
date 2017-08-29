@@ -11,7 +11,14 @@ import (
 	"io"
 	"math"
 	"os"
+	"runtime"
+	"sync"
 	"time"
+)
+
+var (
+	maxBufferSize = 838860800
+	bufferSize    = int64(838860800)
 )
 
 // The Pxl struct definition
@@ -22,6 +29,16 @@ type Pxl struct {
 	Target         string
 	encodedPayload image.Image
 	decodedPayload []byte
+}
+
+type SplittedResult struct {
+	Index   int
+	Payload []color.NRGBA
+}
+
+type Scope struct {
+	Start int64
+	End   int64
 }
 
 // Checks the context on the Pxl struct
@@ -35,7 +52,10 @@ func (p Pxl) Process() error {
 			return err
 		}
 		fmt.Println("Original size:", originalInfo.Size())
-
+		fmt.Println("Start encoding... This can take some time, CPU and memory. Be patient...")
+		//******************************************
+		start := time.Now()
+		//==========================================
 		if err := p.encodeTar(); err != nil {
 			return err
 		}
@@ -58,9 +78,6 @@ func (p Pxl) Process() error {
 		}
 		defer f.Close()
 
-		//******************************************
-		start := time.Now()
-		//==========================================
 		png.Encode(f, p.encodedPayload)
 		//******************************************
 		elapsed := time.Since(start)
@@ -97,65 +114,106 @@ func (p Pxl) Process() error {
 // Encodes the Pxl.Source and stores it to Pxl.encodedPayload
 func (p *Pxl) Encode() error {
 
-	f, err := os.OpenFile(p.Source, os.O_RDONLY, 0444)
-	defer f.Close()
-	if err != nil {
-		return err
-	}
-
 	finfo, err := os.Stat(p.Source)
 	if err != nil {
 		return err
 	}
 
-	dimensions := int(math.Sqrt(float64(finfo.Size()/4))) + 1
+	chunksize := finfo.Size() / int64(runtime.NumCPU())
+	scopes, err := calculateScopes(chunksize)
+	if err != nil {
+		return err
+	}
 
-	x := 0
-	y := 0
+	c := make(chan SplittedResult, len(scopes))
 
-	//create image with dimensions x dimensions
-	img := image.NewNRGBA((image.Rect(0, 0, dimensions, dimensions)))
+	var wg sync.WaitGroup
+	wg.Add(len(scopes))
 
-	var buffer = make([]byte, 838860800)
+	for index, scope := range scopes {
+		go func(index int, scope Scope) {
+			p.encodeChunk(index, scope, c)
+			wg.Done()
+		}(index, scope)
+	}
+	wg.Wait()
+	close(c)
+	p.setEncodedPayload(c)
+
+	return nil
+}
+
+// Encode a Chunk for later processing
+func (p *Pxl) encodeChunk(index int, scope Scope, c chan SplittedResult) {
+	res := SplittedResult{Index: index}
+	f, _ := os.OpenFile(p.Source, os.O_RDONLY, 0444)
+	var buffer = make([]byte, bufferSize)
 	tmp := make([]byte, 4)
-
+	offset := scope.Start
 	for {
-		num, err := f.Read(buffer)
+		num, err := f.ReadAt(buffer, offset)
 
 		if err != errors.New("EOF") && num == 0 {
 			break
 		} else if num == 0 {
 			break
 		} else if err != nil {
-			return err
+			break
 		}
 
 		//loop msg bytes
 		for pos := 0; pos < num; pos += 4 {
 			for p := 0; p < 4; p++ {
-				if len(buffer) < pos+p {
+				tmp[p] = byte(255)
+				if (len(buffer) - 1) < pos+p {
 					tmp[p] = byte(255)
 				} else {
 					tmp[p] = buffer[pos+p]
 				}
 			}
-			img.Set(x, y, color.NRGBA{tmp[pos%4], tmp[pos%4+1], tmp[pos%4+2], tmp[pos%4+3]})
-			x++
-			if x >= dimensions {
-				y++
-				x = 0
-			}
+			res.Payload = append(res.Payload, color.NRGBA{tmp[pos%4], tmp[pos%4+1], tmp[pos%4+2], tmp[pos%4+3]})
+		}
+
+		offset := offset + bufferSize
+		if offset >= scope.End {
+			break
 		}
 	}
+	c <- res
+}
 
+// Append encoded data to Pxl struct
+func (p *Pxl) setEncodedPayload(c <-chan SplittedResult) {
+	sorted := make(map[int]SplittedResult)
+
+	for sr := range c {
+		sorted[sr.Index] = sr
+	}
+
+	var data []color.NRGBA
+	for i := 0; i < len(sorted); i++ {
+		data = append(data, sorted[i].Payload...)
+	}
+
+	dimensions := int(math.Sqrt(float64(len(data)))) + 1
+	img := image.NewNRGBA((image.Rect(0, 0, dimensions, dimensions)))
+
+	x := 0
+	y := 0
+	for _, rgba := range data {
+		img.Set(x, y, rgba)
+		x++
+		if x >= dimensions {
+			y++
+			x = 0
+		}
+	}
 	for posY := y; posY < dimensions; posY++ {
 		for posX := x; posX < dimensions; posX++ {
 			img.Set(posX, posY, color.NRGBA{0, 0, 0, 255})
 		}
 	}
-
 	p.encodedPayload = img
-	return nil
 }
 
 // Decoded the Pxl.Source and stores it to Pxl.decodedPayload
@@ -171,21 +229,7 @@ func (p *Pxl) Decode() error {
 	return nil
 }
 
-// Load image from filesystem
-func loadImage(path string) (*image.NRGBA, error) {
-	file, err := os.Open(path)
-	if err != nil {
-		return nil, err
-	}
-	defer file.Close()
-
-	img, err := png.Decode(file)
-	if err != nil {
-		return nil, err
-	}
-	return img.(*image.NRGBA), nil
-}
-
+// Tar data to encode
 func (p *Pxl) encodeTar() error {
 
 	finfo, err := os.Stat(p.Source)
@@ -231,6 +275,7 @@ func (p *Pxl) encodeTar() error {
 	return nil
 }
 
+// Untar decoded PXL data
 func (p *Pxl) decodeTar() error {
 	r := bytes.NewReader(p.decodedPayload)
 	tr := tar.NewReader(r)
@@ -255,6 +300,38 @@ func (p *Pxl) decodeTar() error {
 	return nil
 }
 
+// Remove the temporary tar file
 func (p *Pxl) removeTar() error {
 	return os.Remove(p.Source)
+}
+
+// Calculate the scopes depending on the CPU
+func calculateScopes(chunksize int64) (map[int]Scope, error) {
+	if chunksize < int64(maxBufferSize) {
+		bufferSize = chunksize
+	}
+
+	scopes := make(map[int]Scope)
+	// calculate start and end of each chunk
+	for i := 0; i < runtime.NumCPU(); i++ {
+		start := int64(i) * chunksize
+		end := start + chunksize
+		scopes[i] = Scope{start, end}
+	}
+	return scopes, nil
+}
+
+// Load image from filesystem
+func loadImage(path string) (*image.NRGBA, error) {
+	file, err := os.Open(path)
+	if err != nil {
+		return nil, err
+	}
+	defer file.Close()
+
+	img, err := png.Decode(file)
+	if err != nil {
+		return nil, err
+	}
+	return img.(*image.NRGBA), nil
 }
