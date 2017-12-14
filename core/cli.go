@@ -15,7 +15,7 @@ var (
 )
 
 // Returns the isVersionMode flag
-func UseVersionMode() bool {
+func useVersionMode() bool {
 	return *isVersionMode
 }
 
@@ -25,7 +25,7 @@ func UseVersionMode() bool {
 func InitFlags() (Pxl, error) {
 	pflag.Parse()
 
-	if UseVersionMode() {
+	if useVersionMode() {
 		fmt.Printf("%s : Version %f\nAuthor : %s (see: %s)\n", PRODUCT_NAME, VERSION, AUTHOR, CONTACT)
 		os.Exit(0)
 	}

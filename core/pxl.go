@@ -21,7 +21,9 @@ var (
 	bufferSize    = int64(838860800)
 )
 
+//
 // The Pxl struct definition
+//
 type Pxl struct {
 	IsEncodeMode   bool
 	IsDecodeMode   bool
@@ -31,12 +33,18 @@ type Pxl struct {
 	decodedPayload []byte
 }
 
-type SplittedResult struct {
+//
+// internal helper struct
+//
+type splittedResult struct {
 	Index   int
 	Payload []color.NRGBA
 }
 
-type Scope struct {
+//
+// internal scope struct
+//
+type scope struct {
 	Start int64
 	End   int64
 }
@@ -125,16 +133,16 @@ func (p *Pxl) Encode() error {
 		return err
 	}
 
-	c := make(chan SplittedResult, len(scopes))
+	c := make(chan splittedResult, len(scopes))
 
 	var wg sync.WaitGroup
 	wg.Add(len(scopes))
 
-	for index, scope := range scopes {
-		go func(index int, scope Scope) {
-			p.encodeChunk(index, scope, c)
+	for index, se := range scopes {
+		go func(index int, se scope) {
+			p.encodeChunk(index, se, c)
 			wg.Done()
-		}(index, scope)
+		}(index, se)
 	}
 	wg.Wait()
 	close(c)
@@ -144,12 +152,12 @@ func (p *Pxl) Encode() error {
 }
 
 // Encode a Chunk for later processing
-func (p *Pxl) encodeChunk(index int, scope Scope, c chan SplittedResult) {
-	res := SplittedResult{Index: index}
+func (p *Pxl) encodeChunk(index int, se scope, c chan splittedResult) {
+	res := splittedResult{Index: index}
 	f, _ := os.OpenFile(p.Source, os.O_RDONLY, 0444)
 	var buffer = make([]byte, bufferSize)
 	tmp := make([]byte, 4)
-	offset := scope.Start
+	offset := se.Start
 	for {
 		num, err := f.ReadAt(buffer, offset)
 
@@ -175,7 +183,7 @@ func (p *Pxl) encodeChunk(index int, scope Scope, c chan SplittedResult) {
 		}
 
 		offset := offset + bufferSize
-		if offset >= scope.End {
+		if offset >= se.End {
 			break
 		}
 	}
@@ -183,8 +191,8 @@ func (p *Pxl) encodeChunk(index int, scope Scope, c chan SplittedResult) {
 }
 
 // Append encoded data to Pxl struct
-func (p *Pxl) setEncodedPayload(c <-chan SplittedResult) {
-	sorted := make(map[int]SplittedResult)
+func (p *Pxl) setEncodedPayload(c <-chan splittedResult) {
+	sorted := make(map[int]splittedResult)
 
 	for sr := range c {
 		sorted[sr.Index] = sr
@@ -306,17 +314,17 @@ func (p *Pxl) removeTar() error {
 }
 
 // Calculate the scopes depending on the CPU
-func calculateScopes(chunksize int64) (map[int]Scope, error) {
+func calculateScopes(chunksize int64) (map[int]scope, error) {
 	if chunksize < int64(maxBufferSize) {
 		bufferSize = chunksize
 	}
 
-	scopes := make(map[int]Scope)
+	scopes := make(map[int]scope)
 	// calculate start and end of each chunk
 	for i := 0; i < runtime.NumCPU(); i++ {
 		start := int64(i) * chunksize
 		end := start + chunksize
-		scopes[i] = Scope{start, end}
+		scopes[i] = scope{start, end}
 	}
 	return scopes, nil
 }
