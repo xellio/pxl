@@ -3,7 +3,6 @@ package core
 import (
 	"fmt"
 	"github.com/spf13/pflag"
-	"github.com/xellio/pxl/core/common"
 	"os"
 	"runtime"
 )
@@ -27,7 +26,7 @@ func InitFlags() (Pxl, error) {
 	pflag.Parse()
 
 	if UseVersionMode() {
-		fmt.Printf("%s : Version %f\nAuthor : %s (see: %s)\n", common.PRODUCT_NAME, common.VERSION, common.AUTHOR, common.CONTACT)
+		fmt.Printf("%s : Version %f\nAuthor : %s (see: %s)\n", PRODUCT_NAME, VERSION, AUTHOR, CONTACT)
 		os.Exit(0)
 	}
 	runtime.GOMAXPROCS(*maxProcs)

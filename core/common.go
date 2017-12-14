@@ -1,4 +1,4 @@
-package common
+package core
 
 const (
 	VERSION      = 1.0
