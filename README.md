@@ -36,5 +36,5 @@ Encoding too lage files can freeze your computer (depending on your hardware)
 ## Installation
 ```
 go get -u github.com/xellio/pxl
-go build github.com/xellio/pxl
+go build github.com/xellio/pxl/cli/pxl
 ```
