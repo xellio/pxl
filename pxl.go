@@ -1,4 +1,4 @@
-package core
+package pxl
 
 import (
 	"archive/tar"
@@ -49,7 +49,7 @@ type scope struct {
 	End   int64
 }
 
-// Checks the context on the Pxl struct
+// Process checks the context on the Pxl struct
 // Encode the Source if Pxl.IsEncodeMode
 // Decode the Source if Pxl.IsDecodeMode
 func (p Pxl) Process() error {
@@ -64,19 +64,15 @@ func (p Pxl) Process() error {
 		//******************************************
 		start := time.Now()
 		//==========================================
-		if err := p.encodeTar(); err != nil {
+		if err = p.encodeTar(); err != nil {
 			return err
 		}
 
-		if err := p.Encode(); err != nil {
-
-			if err := p.removeTar(); err != nil {
-				return err
-			}
-			return err
+		if err = p.Encode(); err != nil {
+			return p.removeTar()
 		}
 
-		if err := p.removeTar(); err != nil {
+		if err = p.removeTar(); err != nil {
 			return err
 		}
 
@@ -84,9 +80,17 @@ func (p Pxl) Process() error {
 		if err != nil {
 			panic(err)
 		}
-		defer f.Close()
+		defer func() {
+			derr := f.Close()
+			if derr != nil {
+				fmt.Println(derr)
+			}
+		}()
 
-		png.Encode(f, p.encodedPayload)
+		err = png.Encode(f, p.encodedPayload)
+		if err != nil {
+			fmt.Println(err)
+		}
 		//******************************************
 		elapsed := time.Since(start)
 		//==========================================
@@ -119,7 +123,7 @@ func (p Pxl) Process() error {
 	return nil
 }
 
-// Encodes the Pxl.Source and stores it to Pxl.encodedPayload
+// Encode the Pxl.Source and stores it to Pxl.encodedPayload
 func (p *Pxl) Encode() error {
 
 	finfo, err := os.Stat(p.Source)
@@ -154,7 +158,10 @@ func (p *Pxl) Encode() error {
 // Encode a Chunk for later processing
 func (p *Pxl) encodeChunk(index int, se scope, c chan splittedResult) {
 	res := splittedResult{Index: index}
-	f, _ := os.OpenFile(p.Source, os.O_RDONLY, 0444)
+	f, err := os.OpenFile(p.Source, os.O_RDONLY, 0444)
+	if err != nil {
+		fmt.Println(err)
+	}
 	var buffer = make([]byte, bufferSize)
 	tmp := make([]byte, 4)
 	offset := se.Start
@@ -182,7 +189,7 @@ func (p *Pxl) encodeChunk(index int, se scope, c chan splittedResult) {
 			res.Payload = append(res.Payload, color.NRGBA{tmp[pos%4], tmp[pos%4+1], tmp[pos%4+2], tmp[pos%4+3]})
 		}
 
-		offset := offset + bufferSize
+		offset = offset + bufferSize
 		if offset >= se.End {
 			break
 		}
@@ -224,16 +231,14 @@ func (p *Pxl) setEncodedPayload(c <-chan splittedResult) {
 	p.encodedPayload = img
 }
 
-// Decoded the Pxl.Source and stores it to Pxl.decodedPayload
+// Decode the Pxl.Source and stores it to Pxl.decodedPayload
 func (p *Pxl) Decode() error {
 	img, err := loadImage(p.Source)
 	if err != nil {
 		return err
 	}
 
-	for _, i := range img.Pix {
-		p.decodedPayload = append(p.decodedPayload, i)
-	}
+	p.decodedPayload = append(p.decodedPayload, img.Pix...)
 	return nil
 }
 
@@ -256,11 +261,17 @@ func (p *Pxl) encodeTar() error {
 	if err != nil {
 		return err
 	}
-	defer tarfile.Close()
+
+	defer func() {
+		derr := tarfile.Close()
+		if derr != nil {
+			fmt.Println(derr)
+		}
+	}()
 
 	tw := tar.NewWriter(tarfile)
 
-	if err := tw.WriteHeader(header); err != nil {
+	if err = tw.WriteHeader(header); err != nil {
 		return err
 	}
 
@@ -268,7 +279,12 @@ func (p *Pxl) encodeTar() error {
 	if err != nil {
 		return err
 	}
-	defer file.Close()
+	defer func() {
+		derr := file.Close()
+		if derr != nil {
+			fmt.Println(derr)
+		}
+	}()
 
 	if _, err := io.Copy(tw, file); err != nil {
 		return err
@@ -299,7 +315,12 @@ func (p *Pxl) decodeTar() error {
 		if err != nil {
 			return err
 		}
-		defer file.Close()
+		defer func() {
+			derr := file.Close()
+			if derr != nil {
+				fmt.Println(derr)
+			}
+		}()
 
 		if _, err := io.Copy(file, tr); err != nil {
 			return err
@@ -335,7 +356,12 @@ func loadImage(path string) (*image.NRGBA, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer file.Close()
+	defer func() {
+		derr := file.Close()
+		if derr != nil {
+			fmt.Println(derr)
+		}
+	}()
 
 	img, err := png.Decode(file)
 	if err != nil {

@@ -1,7 +1,7 @@
 ## PXL
 pxl is a command-line tool for converting files to pxl images. In some cases this can save some bytes when transfering the data or just retuns a spacy image.
 
-[Documentation](https://godoc.org/github.com/xellio/pxl/core)
+[Documentation](https://godoc.org/github.com/xellio/pxl)
 
 ## Usage
 ### encoding:
@@ -34,9 +34,3 @@ No, probably not - But it looks good
 
 ## Warning
 Encoding too lage files can freeze your computer (depending on your hardware)
-
-## Installation
-```
-go get -u github.com/xellio/pxl
-go build github.com/xellio/pxl/cli/pxl
-```

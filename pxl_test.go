@@ -1,11 +1,13 @@
 // +build !testing
-package core
+
+package pxl
 
 import (
-	"github.com/stretchr/testify/require"
 	"io/ioutil"
 	"os"
 	"testing"
+
+	"github.com/stretchr/testify/require"
 )
 
 func createTestFile(text string) (string, error) {
