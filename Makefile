@@ -6,7 +6,8 @@ $(TARGET): vendor clean
 	$(GO) build -ldflags="-s -w" -o $@ ./cli/main.go
 
 vendor:
-	glide install
+	dep ensure
+#	glide install
 
 clean:
 	rm -f $(TARGET)

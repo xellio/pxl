@@ -3,3 +3,5 @@ vendor
 pxl
 *.pxl
 testfile.txt
+glide.lock
+Gopkg.lock
