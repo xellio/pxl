@@ -2,12 +2,21 @@ GO      = go
 TARGET  = pxl
 GOLINT  = $(GOPATH)/bin/gometalinter
 
+GLIDE_VERSION := $(shell glide --version 2>/dev/null)
+DEP_VERSION := $(shell dep version 2>/dev/null)
+
+
 $(TARGET): vendor clean 
 	$(GO) build -ldflags="-s -w" -o $@ ./cli/main.go
 
 vendor:
+ifdef DEP_VERSION
 	dep ensure
-#	glide install
+else ifdef GLIDE_VERSION
+	glide install
+else
+	go get .
+endif
 
 clean:
 	rm -f $(TARGET)
