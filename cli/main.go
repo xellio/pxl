@@ -2,8 +2,10 @@ package main
 
 import (
 	"fmt"
+	"log"
 	"os"
 	"runtime"
+	"runtime/pprof"
 
 	"github.com/spf13/pflag"
 	"github.com/xellio/pxl"
@@ -14,6 +16,8 @@ var (
 	decodeFlag    = pflag.StringP("decode", "d", "", "Enable decode mode")
 	isVersionMode = pflag.BoolP("version", "v", false, "Display version number")
 	maxProcs      = pflag.IntP("procs", "p", runtime.NumCPU(), "Number of threads to use")
+	cpuprofile    = pflag.String("cpuprofile", "", "write cpu profile to `file`")
+	memprofile    = pflag.String("memprofile", "", "write memory profile to `file`")
 )
 
 func main() {
@@ -22,6 +26,29 @@ func main() {
 	if err != nil {
 		fmt.Println(err)
 		os.Exit(1)
+	}
+
+	if *cpuprofile != "" {
+		f, err := os.Create(*cpuprofile)
+		if err != nil {
+			log.Fatal("could not create CPU profile: ", err)
+		}
+		if err := pprof.StartCPUProfile(f); err != nil {
+			log.Fatal("could not start CPU profile: ", err)
+		}
+		defer pprof.StopCPUProfile()
+	}
+
+	if *memprofile != "" {
+		f, err := os.Create(*memprofile)
+		if err != nil {
+			log.Fatal("could not create memory profile: ", err)
+		}
+		runtime.GC() // get up-to-date statistics
+		if err := pprof.WriteHeapProfile(f); err != nil {
+			log.Fatal("could not write memory profile: ", err)
+		}
+		f.Close()
 	}
 
 	err = pxl.Process()
@@ -53,6 +80,7 @@ func initFlags() (pxl.Pxl, error) {
 		fmt.Printf("%s : Version %f\nAuthor : %s (see: %s)\n", pxl.ProductName, pxl.Version, pxl.Author, pxl.Contact)
 		os.Exit(0)
 	}
+
 	runtime.GOMAXPROCS(*maxProcs)
 	pxl, err := generatePxlFromFlags()
 	if err != nil {
