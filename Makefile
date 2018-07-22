@@ -6,11 +6,14 @@ BINDIR = ./bin/
 
 GLIDE_VERSION := $(shell glide --version 2>/dev/null)
 DEP_VERSION := $(shell dep version 2>/dev/null)
+UPX := $(shell upx --version 2>/dev/null)
 
 all: $(TARGET)
 
 $(TARGET): build
+ifdef UPX
 	upx --brute $(BINDIR)$@
+endif
 
 build: vendor clean $(BINDIR)
 	$(GO) build -ldflags="-s -w" -o $(BINDIR)$(TARGET) ./cli/main.go
