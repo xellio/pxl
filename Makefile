@@ -2,12 +2,18 @@ GO      = go
 TARGET  = pxl
 GOLINT  = $(GOPATH)/bin/gometalinter
 
+BINDIR = ./bin/
+
 GLIDE_VERSION := $(shell glide --version 2>/dev/null)
 DEP_VERSION := $(shell dep version 2>/dev/null)
 
+all: $(TARGET)
 
-$(TARGET): vendor clean 
-	$(GO) build -ldflags="-s -w" -o $@ ./cli/main.go
+$(TARGET): build
+	upx --brute $(BINDIR)$@
+
+build: vendor clean $(BINDIR)
+	$(GO) build -ldflags="-s -w" -o $(BINDIR)$(TARGET) ./cli/main.go
 
 vendor:
 ifdef DEP_VERSION
@@ -19,7 +25,10 @@ else
 endif
 
 clean:
-	rm -f $(TARGET)
+	rm -f $(BINDIR)*
+
+$(BINDIR):
+	mkdir -p $(BINDIR)
 
 test:
 	$(GO) test -race $$($(GO) list ./...)
