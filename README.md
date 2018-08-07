@@ -1,7 +1,9 @@
 ## PXL
 pxl is a command-line tool for converting files to pxl images. In some cases this can save some bytes when transfering the data or just retuns a spacy image.
 
-[Documentation](https://godoc.org/github.com/xellio/pxl)
+[![go report card](https://goreportcard.com/badge/github.com/xellio/pxl "go report card")](https://goreportcard.com/report/github.com/xellio/pxl)
+[![MIT license](http://img.shields.io/badge/license-MIT-brightgreen.svg)](http://opensource.org/licenses/MIT)
+[![GoDoc](https://godoc.org/github.com/xellio/pxl?status.svg)](https://godoc.org/github.com/xellio/pxl)
 
 ## Usage
 ### encoding:
