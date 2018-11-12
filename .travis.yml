@@ -8,3 +8,5 @@ go:
 script:
   - make lint
   - make test
+
+  install: true
