@@ -6,8 +6,6 @@ GO_SUBPKGS 	= $(shell $(GO) list ./... | grep -v /vendor/ | sed -e "s!$$($(GO) l
 
 BINDIR = ./bin/
 
-GLIDE_VERSION := $(shell glide --version 2>/dev/null)
-DEP_VERSION := $(shell dep version 2>/dev/null)
 UPX := $(shell upx --version 2>/dev/null)
 
 all: $(TARGET)
@@ -21,13 +19,7 @@ build: vendor clean $(BINDIR)
 	$(GO) build -ldflags="-s -w" -o $(BINDIR)$(TARGET) ./cli/main.go
 
 vendor:
-ifdef DEP_VERSION
-	dep ensure
-else ifdef GLIDE_VERSION
-	glide install
-else
-	go get .
-endif
+	go mod vendor
 
 clean:
 	rm -f $(BINDIR)*
