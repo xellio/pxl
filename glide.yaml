@@ -1,4 +1,0 @@
-package: github.com/xellio/pxl
-import:
-- package: github.com/spf13/pflag
-  version: ^1.0.0
