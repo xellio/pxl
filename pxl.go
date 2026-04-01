@@ -83,7 +83,7 @@ func (p *Pxl) Process() error {
 	return nil
 }
 
-// Encode reads the Source file, wraps it in tar, and encodes it as pixel data
+// Encode reads the Source file, wraps it in tar and encodes it as pixel data
 func (p *Pxl) Encode() error {
 	tarData, err := tarToMemory(p.Source)
 	if err != nil {
