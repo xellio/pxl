@@ -36,7 +36,7 @@ func roundTrip(t *testing.T, source, target string) string {
 	decodeDir := t.TempDir()
 	origDir, _ := os.Getwd()
 	require.NoError(t, os.Chdir(decodeDir))
-	t.Cleanup(func() { os.Chdir(origDir) })
+	t.Cleanup(func() { _ = os.Chdir(origDir) })
 
 	decodePxl := &Pxl{
 		IsDecodeMode: true,
