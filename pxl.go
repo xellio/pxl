@@ -3,7 +3,6 @@ package pxl
 import (
 	"archive/tar"
 	"bytes"
-	"errors"
 	"fmt"
 	"image"
 	"image/color"
@@ -16,9 +15,8 @@ import (
 	"time"
 )
 
-var (
-	maxBufferSize = 838860800
-	bufferSize    = int64(838860800)
+const (
+	maxBufferSize = 32 * 1024 * 1024 // 32MB
 )
 
 //
@@ -36,9 +34,10 @@ type Pxl struct {
 //
 // internal helper struct
 //
-type splittedResult struct {
+type splitResult struct {
 	Index   int
 	Payload []color.NRGBA
+	Error   error
 }
 
 //
@@ -52,7 +51,7 @@ type scope struct {
 // Process checks the context on the Pxl struct
 // Encode the Source if Pxl.IsEncodeMode
 // Decode the Source if Pxl.IsDecodeMode
-func (p Pxl) Process() error {
+func (p *Pxl) Process() error {
 
 	if p.IsEncodeMode {
 		originalInfo, err := os.Stat(p.Source)
@@ -61,15 +60,16 @@ func (p Pxl) Process() error {
 		}
 		fmt.Println("Original size:", originalInfo.Size())
 		fmt.Println("Start encoding... This can take some time, CPU and memory. Be patient...")
-		//******************************************
+
 		start := time.Now()
-		//==========================================
+
 		if err = p.encodeTar(); err != nil {
 			return err
 		}
 
 		if err = p.Encode(); err != nil {
-			return p.removeTar()
+			_ = p.removeTar()
+			return err
 		}
 
 		if err = p.removeTar(); err != nil {
@@ -78,22 +78,19 @@ func (p Pxl) Process() error {
 
 		f, err := os.OpenFile(p.Target, os.O_WRONLY|os.O_CREATE, 0600)
 		if err != nil {
-			panic(err)
+			return err
 		}
 		defer func() {
-			derr := f.Close()
-			if derr != nil {
+			if derr := f.Close(); derr != nil {
 				fmt.Println(derr)
 			}
 		}()
 
-		err = png.Encode(f, p.encodedPayload)
-		if err != nil {
-			fmt.Println(err)
+		if err = png.Encode(f, p.encodedPayload); err != nil {
+			return err
 		}
-		//******************************************
+
 		elapsed := time.Since(start)
-		//==========================================
 
 		targetInfo, err := os.Stat(p.Target)
 		if err != nil {
@@ -105,16 +102,12 @@ func (p Pxl) Process() error {
 	}
 
 	if p.IsDecodeMode {
-		//******************************************
 		start := time.Now()
-		//==========================================
 		if err := p.Decode(); err != nil {
 			return err
 		}
-		//******************************************
 		elapsed := time.Since(start)
 		fmt.Printf("Decoding PXL: %s\n", elapsed)
-		//==========================================
 		if err := p.decodeTar(); err != nil {
 			return err
 		}
@@ -131,77 +124,90 @@ func (p *Pxl) Encode() error {
 		return err
 	}
 
-	chunksize := finfo.Size() / int64(runtime.NumCPU())
-	scopes, err := calculateScopes(chunksize)
-	if err != nil {
-		return err
-	}
+	fileSize := finfo.Size()
+	scopes, bufSize := calculateScopes(fileSize)
 
-	c := make(chan splittedResult, len(scopes))
+	c := make(chan splitResult, len(scopes))
 
 	var wg sync.WaitGroup
 	wg.Add(len(scopes))
 
 	for index, se := range scopes {
 		go func(index int, se scope) {
-			p.encodeChunk(index, se, c)
+			p.encodeChunk(index, se, bufSize, c)
 			wg.Done()
 		}(index, se)
 	}
 	wg.Wait()
 	close(c)
-	p.setEncodedPayload(c)
 
-	return nil
+	return p.setEncodedPayload(c)
 }
 
 // Encode a Chunk for later processing
-func (p *Pxl) encodeChunk(index int, se scope, c chan splittedResult) {
-	res := splittedResult{Index: index}
-	f, err := os.OpenFile(p.Source, os.O_RDONLY, 0444)
+func (p *Pxl) encodeChunk(index int, se scope, bufSize int64, c chan splitResult) {
+	res := splitResult{Index: index}
+
+	f, err := os.Open(p.Source)
 	if err != nil {
-		fmt.Println(err)
+		res.Error = err
+		c <- res
+		return
 	}
-	var buffer = make([]byte, bufferSize)
-	tmp := make([]byte, 4)
+	defer f.Close()
+
+	buffer := make([]byte, bufSize)
 	offset := se.Start
-	for {
+
+	for offset < se.End {
 		num, err := f.ReadAt(buffer, offset)
 
-		if err != errors.New("EOF") && num == 0 {
-			break
-		} else if num == 0 {
-			break
-		} else if err != nil {
-			break
+		// Clamp to scope boundary
+		if offset+int64(num) > se.End {
+			num = int(se.End - offset)
 		}
 
-		//loop msg bytes
+		// Convert bytes to NRGBA colors
 		for pos := 0; pos < num; pos += 4 {
-			for p := 0; p < 4; p++ {
-				tmp[p] = byte(255)
-				if (len(buffer) - 1) < pos+p {
-					tmp[p] = byte(255)
-				} else {
-					tmp[p] = buffer[pos+p]
-				}
+			r, g, b, a := byte(255), byte(255), byte(255), byte(255)
+			if pos < num {
+				r = buffer[pos]
 			}
-			res.Payload = append(res.Payload, color.NRGBA{tmp[pos%4], tmp[pos%4+1], tmp[pos%4+2], tmp[pos%4+3]})
+			if pos+1 < num {
+				g = buffer[pos+1]
+			}
+			if pos+2 < num {
+				b = buffer[pos+2]
+			}
+			if pos+3 < num {
+				a = buffer[pos+3]
+			}
+			res.Payload = append(res.Payload, color.NRGBA{r, g, b, a})
 		}
 
-		offset = offset + bufferSize
-		if offset >= se.End {
+		if err == io.EOF || num == 0 {
 			break
 		}
+		if err != nil {
+			res.Error = err
+			c <- res
+			return
+		}
+
+		offset += int64(num)
 	}
+
 	c <- res
 }
 
 // Append encoded data to Pxl struct
-func (p *Pxl) setEncodedPayload(c <-chan splittedResult) {
-	sorted := make(map[int]splittedResult)
+func (p *Pxl) setEncodedPayload(c <-chan splitResult) error {
+	sorted := make(map[int]splitResult)
 
 	for sr := range c {
+		if sr.Error != nil {
+			return sr.Error
+		}
 		sorted[sr.Index] = sr
 	}
 
@@ -227,8 +233,10 @@ func (p *Pxl) setEncodedPayload(c <-chan splittedResult) {
 		for posX := x; posX < dimensions; posX++ {
 			img.Set(posX, posY, color.NRGBA{0, 0, 0, 255})
 		}
+		x = 0
 	}
 	p.encodedPayload = img
+	return nil
 }
 
 // Decode the Pxl.Source and stores it to Pxl.decodedPayload
@@ -263,8 +271,7 @@ func (p *Pxl) encodeTar() error {
 	}
 
 	defer func() {
-		derr := tarfile.Close()
-		if derr != nil {
+		if derr := tarfile.Close(); derr != nil {
 			fmt.Println(derr)
 		}
 	}()
@@ -280,8 +287,7 @@ func (p *Pxl) encodeTar() error {
 		return err
 	}
 	defer func() {
-		derr := file.Close()
-		if derr != nil {
+		if derr := file.Close(); derr != nil {
 			fmt.Println(derr)
 		}
 	}()
@@ -311,22 +317,23 @@ func (p *Pxl) decodeTar() error {
 			return err
 		}
 
-		file, err := os.OpenFile(hdr.FileInfo().Name(), os.O_WRONLY|os.O_CREATE, hdr.FileInfo().Mode())
-		if err != nil {
-			return err
-		}
-		defer func() {
-			derr := file.Close()
-			if derr != nil {
-				fmt.Println(derr)
-			}
-		}()
-
-		if _, err := io.Copy(file, tr); err != nil {
+		if err := extractTarEntry(hdr, tr); err != nil {
 			return err
 		}
 	}
 	return nil
+}
+
+// extractTarEntry writes a single tar entry to disk
+func extractTarEntry(hdr *tar.Header, tr *tar.Reader) error {
+	file, err := os.OpenFile(hdr.FileInfo().Name(), os.O_WRONLY|os.O_CREATE, hdr.FileInfo().Mode())
+	if err != nil {
+		return err
+	}
+	defer file.Close()
+
+	_, err = io.Copy(file, tr)
+	return err
 }
 
 // Remove the temporary tar file
@@ -335,19 +342,28 @@ func (p *Pxl) removeTar() error {
 }
 
 // Calculate the scopes depending on the CPU
-func calculateScopes(chunksize int64) (map[int]scope, error) {
-	if chunksize < int64(maxBufferSize) {
-		bufferSize = chunksize
+func calculateScopes(fileSize int64) (map[int]scope, int64) {
+	numCPU := runtime.NumCPU()
+	chunkSize := fileSize / int64(numCPU)
+
+	bufSize := chunkSize
+	if bufSize > int64(maxBufferSize) {
+		bufSize = int64(maxBufferSize)
+	}
+	if bufSize <= 0 {
+		bufSize = 1
 	}
 
 	scopes := make(map[int]scope)
-	// calculate start and end of each chunk
-	for i := 0; i < runtime.NumCPU(); i++ {
-		start := int64(i) * chunksize
-		end := start + chunksize
+	for i := 0; i < numCPU; i++ {
+		start := int64(i) * chunkSize
+		end := start + chunkSize
+		if i == numCPU-1 {
+			end = fileSize
+		}
 		scopes[i] = scope{start, end}
 	}
-	return scopes, nil
+	return scopes, bufSize
 }
 
 // Load image from filesystem
@@ -356,16 +372,16 @@ func loadImage(path string) (*image.NRGBA, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer func() {
-		derr := file.Close()
-		if derr != nil {
-			fmt.Println(derr)
-		}
-	}()
+	defer file.Close()
 
 	img, err := png.Decode(file)
 	if err != nil {
 		return nil, err
 	}
-	return img.(*image.NRGBA), nil
+
+	nrgba, ok := img.(*image.NRGBA)
+	if !ok {
+		return nil, fmt.Errorf("unexpected image format: %T", img)
+	}
+	return nrgba, nil
 }

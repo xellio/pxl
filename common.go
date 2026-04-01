@@ -1,12 +1,12 @@
 package pxl
 
 const (
-	// Version ...
-	Version = 1.0
-	// ProductName ...
+	// Version of PXL
+	Version = "1.0.0"
+	// ProductName is the name of the product
 	ProductName = "PXL"
-	// Author ...
+	// Author of PXL
 	Author = "xellio"
-	// Contact ...
+	// Contact URL
 	Contact = "https://github.com/xellio"
 )

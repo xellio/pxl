@@ -22,7 +22,7 @@ var (
 
 func main() {
 	// Parsing and validate arguments before running
-	pxl, err := initFlags()
+	p, err := initFlags()
 	if err != nil {
 		fmt.Println(err)
 		os.Exit(1)
@@ -39,26 +39,26 @@ func main() {
 		defer pprof.StopCPUProfile()
 	}
 
-	if *memprofile != "" {
-		f, err := os.Create(*memprofile)
-		if err != nil {
-			log.Fatal("could not create memory profile: ", err)
-		}
-		runtime.GC() // get up-to-date statistics
-		if err := pprof.WriteHeapProfile(f); err != nil {
-			log.Fatal("could not write memory profile: ", err)
-		}
-		f.Close()
-	}
-
-	err = pxl.Process()
+	err = p.Process()
 	if err != nil {
 		fmt.Println(err)
 		os.Exit(1)
 	}
 
-	if pxl.IsEncodeMode {
-		fmt.Println("PXL-File:", pxl.Target)
+	if *memprofile != "" {
+		f, err := os.Create(*memprofile)
+		if err != nil {
+			log.Fatal("could not create memory profile: ", err)
+		}
+		defer f.Close()
+		runtime.GC()
+		if err := pprof.WriteHeapProfile(f); err != nil {
+			log.Fatal("could not write memory profile: ", err)
+		}
+	}
+
+	if p.IsEncodeMode {
+		fmt.Println("PXL-File:", p.Target)
 	} else {
 		fmt.Println("Success")
 	}
@@ -77,51 +77,51 @@ func initFlags() (pxl.Pxl, error) {
 	pflag.Parse()
 
 	if useVersionMode() {
-		fmt.Printf("%s : Version %f\nAuthor : %s (see: %s)\n", pxl.ProductName, pxl.Version, pxl.Author, pxl.Contact)
+		fmt.Printf("%s : Version %s\nAuthor : %s (see: %s)\n", pxl.ProductName, pxl.Version, pxl.Author, pxl.Contact)
 		os.Exit(0)
 	}
 
 	runtime.GOMAXPROCS(*maxProcs)
-	pxl, err := generatePxlFromFlags()
+	p, err := generatePxlFromFlags()
 	if err != nil {
 		usage()
 	}
-	return pxl, err
+	return p, err
 
 }
 
 // Creates and returns a new Pxl struct
 // Returns an error if invalid values were passed by pflags
 func generatePxlFromFlags() (pxl.Pxl, error) {
-	pxl := new(pxl.Pxl)
+	p := new(pxl.Pxl)
 
 	if len(*encodeFlag) <= 0 && len(*decodeFlag) <= 0 {
-		return *pxl, fmt.Errorf("Missing argument: input is required")
+		return *p, fmt.Errorf("Missing argument: input is required")
 
 	}
 
 	if len(*encodeFlag) > 0 && len(*decodeFlag) > 0 {
-		return *pxl, fmt.Errorf("Logic error: only encode or decode flag is allowed")
+		return *p, fmt.Errorf("Logic error: only encode or decode flag is allowed")
 	}
 
 	if len(*encodeFlag) > 0 {
-		pxl.IsEncodeMode = true
-		pxl.Source = *encodeFlag
-		pxl.Target = *encodeFlag + ".pxl"
+		p.IsEncodeMode = true
+		p.Source = *encodeFlag
+		p.Target = *encodeFlag + ".pxl"
 	}
 
 	if len(*decodeFlag) > 0 {
-		pxl.Source = *decodeFlag
-		pxl.IsDecodeMode = true
+		p.Source = *decodeFlag
+		p.IsDecodeMode = true
 	}
 
-	return *pxl, nil
+	return *p, nil
 }
 
 // show usage information
 func usage() {
 	fmt.Println(`
-Usage: 
+Usage:
     pxl [option] [file]
 
 The options are:
