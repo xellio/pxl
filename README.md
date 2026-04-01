@@ -44,7 +44,6 @@ The binary will be at `./bin/pxl`.
 ```
 -e, --encode    Encode the given file
 -d, --decode    Decode the given (pxl) file
--p, --procs     Number of threads to use (default: all CPUs)
 -v, --version   Display version information
 ```
 
